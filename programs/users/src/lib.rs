@@ -4,7 +4,7 @@ mod misc;
 mod structs;
 use misc::*;
 use structs::user::UserAcc;
-declare_id!("3bCGRMQD5NstA15ZCWhhFwrzf51s51PsVaxukojsc75p");
+declare_id!("DQ9nu6GFksF3R1nR15bT46KJDzoTZsYGenm71pHF6xZJ");
 
 #[program]
 pub mod users {
