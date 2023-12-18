@@ -6,6 +6,7 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.26.0",
+    "@solana/spl-token": "^0.3.9",
     "@solana/web3.js": "1.78.4",
     "assert": "*",
     "bn.js": "*"

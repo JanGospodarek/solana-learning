@@ -2,10 +2,21 @@ import * as web3 from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import type { Users } from "../target/types/users";
 import { sleep } from "../misc/utils";
+
+import {
+  MINT_SIZE,
+  TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccount,
+  createAssociatedTokenAccountInstruction,
+  createInitializeMintInstruction,
+  getAssociatedTokenAddress,
+} from "@solana/spl-token";
+
 // Setup wallets
 const acc1 = anchor.web3.Keypair.generate();
 const acc2 = anchor.web3.Keypair.generate();
-
+const mint = anchor.web3.Keypair.generate();
+const mint_wallet = anchor.web3.Keypair.generate();
 describe("users", () => {
   anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.Users as anchor.Program<Users>;
@@ -36,12 +47,6 @@ describe("users", () => {
         .rpc();
       await sleep(100);
 
-      const balance = (
-        await program.account.userAcc.fetch(pda)
-      ).balance.toNumber();
-
-      console.log(`balance:    ${balance}`);
-
       return pda;
     };
 
@@ -49,24 +54,48 @@ describe("users", () => {
     acc2PDA = await createUser(acc2);
     await sleep(1000);
   });
-  it("transfer", async () => {
-    await program.methods
-      .transfer(new anchor.BN(5))
+  it("initialize mints on pda", async () => {
+    const tx = await program.methods
+      .initializeMint()
       .accounts({
-        sender: acc1.publicKey,
-        senderAcc: acc1PDA,
-        receiverAcc: acc2PDA,
+        mint: mint.publicKey,
+        payer: acc1.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      })
+      .signers([acc1, mint])
+      .rpc();
+  });
+  it("mint tokens", async () => {
+    // Tworzenie i inicjowanie konta ATA
+    const createATAIx = createAssociatedTokenAccountInstruction(
+      TOKEN_PROGRAM_ID,
+      mint.publicKey,
+      acc1PDA,
+      acc1.publicKey
+    );
+
+    const tx = new web3.Transaction().add(createATAIx);
+    const signedTx = await provider.sendAndConfirm(tx, [acc1]);
+
+    console.log(signedTx);
+
+    const ata = await getAssociatedTokenAddress(
+      TOKEN_PROGRAM_ID,
+      mint.publicKey,
+      acc1PDA
+    );
+
+    await program.methods
+      .mintToken(new anchor.BN(100))
+      .accounts({
+        mint: mint.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenAccount: ata,
+        authority: acc1.publicKey,
       })
       .signers([acc1])
-      .rpc();
-    await sleep(500);
-    const balance1 = (
-      await program.account.userAcc.fetch(acc1PDA)
-    ).balance.toNumber();
-    const balance2 = (
-      await program.account.userAcc.fetch(acc2PDA)
-    ).balance.toNumber();
-    console.log(`balance1: ${balance1}`);
-    console.log(`balance2: ${balance2}`);
+      .send();
   });
 });

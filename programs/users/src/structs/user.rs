@@ -9,20 +9,21 @@ pub struct UserAcc {
 }
 impl UserAcc {
     // TODO make this lazy calculation
-    pub const ACCOUNT_SPACE: usize = 8 + 8 + 1;
+    // pub const ACCOUNT_SPACE: usize = 8 + 8 + 1;
+    pub const ACCOUNT_SPACE: usize = 8 + 8 + 32;
+    
+    // pub fn give(&mut self, ammount: u64) -> Result<()> {
+    //     self.balance += ammount;
 
-    pub fn give(&mut self, ammount: u64) -> Result<()> {
-        self.balance += ammount;
+    //     Ok(())
+    // }
+    // pub fn take(&mut self, ammount: u64) -> Result<()> {
+    //     if self.balance < ammount {
+    //         return err!(TransferError::PayerIsBroke);
+    //     }
 
-        Ok(())
-    }
-    pub fn take(&mut self, ammount: u64) -> Result<()> {
-        if self.balance < ammount {
-            return err!(TransferError::PayerIsBroke);
-        }
+    //     self.balance -= ammount;
 
-        self.balance -= ammount;
-
-        Ok(())
-    }
+    //     Ok(())
+    // }
 }
