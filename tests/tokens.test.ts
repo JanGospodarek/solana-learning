@@ -4,14 +4,11 @@ import type { Users } from "../target/types/users";
 import {
   MINT_SIZE,
   TOKEN_PROGRAM_ID,
-  createAssociatedTokenAccount,
   createAssociatedTokenAccountInstruction,
   createInitializeMintInstruction,
   getAssociatedTokenAddress,
 } from "@solana/spl-token";
 import { sleep } from "../misc/utils";
-
-// Setup wallets
 
 describe("users", () => {
   const provider = anchor.AnchorProvider.env();
@@ -34,6 +31,7 @@ describe("users", () => {
       mintKey.publicKey,
       key
     );
+
     const mint_tx = new anchor.web3.Transaction().add(
       anchor.web3.SystemProgram.createAccount({
         fromPubkey: key,
@@ -50,13 +48,7 @@ describe("users", () => {
         mintKey.publicKey
       )
     );
-    const res = await provider.sendAndConfirm(mint_tx, [mintKey]);
-    console.log(
-      await program.provider.connection.getParsedAccountInfo(mintKey.publicKey)
-    );
-    console.log(res);
-    console.log(mintKey.publicKey.toString());
-    console.log(key.toString());
+    await provider.sendAndConfirm(mint_tx, [mintKey]);
 
     const tx = program.methods
       .mintToken()
@@ -82,10 +74,12 @@ describe("users", () => {
   it("transfer token", async () => {
     const myWallet = provider.wallet.publicKey;
     const toWallet = web3.Keypair.generate();
+
     const toATA = await getAssociatedTokenAddress(
       mintKey.publicKey,
       toWallet.publicKey
     );
+
     const mint_tx = new anchor.web3.Transaction().add(
       createAssociatedTokenAccountInstruction(
         myWallet,
@@ -94,9 +88,9 @@ describe("users", () => {
         mintKey.publicKey
       )
     );
-    const res = await provider.sendAndConfirm(mint_tx, []);
-    console.log(res);
-    const tx = await program.methods
+
+    await provider.sendAndConfirm(mint_tx, []);
+    await program.methods
       .transferToken()
       .accounts({
         tokenProgram: TOKEN_PROGRAM_ID,
@@ -107,14 +101,18 @@ describe("users", () => {
       .rpc();
     await sleep(1000);
 
-    const minted = (
+    const mintedFrom = (
       await program.provider.connection.getParsedAccountInfo(
         associatedTokenAccount
       )
     ).value.data.parsed.info.tokenAmount.amount;
 
+    const mintedTo = (
+      await program.provider.connection.getParsedAccountInfo(toATA)
+    ).value.data.parsed.info.tokenAmount.amount;
+
     await sleep(1000);
 
-    console.log(minted);
+    console.log(mintedFrom, mintedTo);
   });
 });
