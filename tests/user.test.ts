@@ -2,6 +2,7 @@ import * as web3 from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import type { Users } from "../target/types/users";
 import { sleep } from "../misc/utils";
+import { PublicKey } from "@solana/web3.js";
 
 import {
   MINT_SIZE,
@@ -63,13 +64,14 @@ describe("users", () => {
         systemProgram: anchor.web3.SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        authority: acc1.publicKey,
       })
       .signers([acc1, mint])
       .rpc();
   });
   it("mint tokens", async () => {
     // Tworzenie i inicjowanie konta ATA
-    const createATAIx = createAssociatedTokenAccountInstruction(
+    const createATAIx = await createAssociatedTokenAccountInstruction(
       TOKEN_PROGRAM_ID,
       mint.publicKey,
       acc1PDA,
@@ -80,22 +82,25 @@ describe("users", () => {
     const signedTx = await provider.sendAndConfirm(tx, [acc1]);
 
     console.log(signedTx);
-
+    await sleep(1000);
     const ata = await getAssociatedTokenAddress(
       TOKEN_PROGRAM_ID,
       mint.publicKey,
       acc1PDA
     );
-
+    const [pda, bump] = await PublicKey.findProgramAddressSync(
+      [Buffer.from(anchor.utils.bytes.utf8.encode("user_acc"))],
+      program.programId
+    );
     await program.methods
-      .mintToken(new anchor.BN(100))
+      .mintToken(bump, new anchor.BN(100))
       .accounts({
         mint: mint.publicKey,
         tokenProgram: TOKEN_PROGRAM_ID,
         tokenAccount: ata,
-        authority: acc1.publicKey,
+        authority: acc1PDA.publicKey,
       })
-      .signers([acc1])
-      .send();
+      .signers([acc1PDA])
+      .rpc();
   });
 });

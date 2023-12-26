@@ -16,7 +16,8 @@ pub mod users {
      pub fn initialize_mint(ctx: Context<InitializeMint>) -> Result<()> {
         Ok(())
     }
-    pub fn mint_token(ctx: Context<MintToken>, amount: u64) -> Result<()> {
+    pub fn mint_token(ctx: Context<MintToken>,bump:u8, amount: u64) -> Result<()> {
+        let bump:&[u8]=&[bump][..];
         // Create the MintTo struct for our context
         let cpi_accounts = MintTo {
             mint: ctx.accounts.mint.to_account_info(),
@@ -25,7 +26,8 @@ pub mod users {
         };
         let cpi_program = ctx.accounts.token_program.to_account_info();
         // Create the CpiContext we need for the request
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+        let binding=[&[bump][..]];
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts).with_signer(&binding);
 
         // Execute anchor's helper function to mint tokens
         token::mint_to(cpi_ctx, amount)?;
@@ -59,13 +61,15 @@ pub struct CreateUser<'info> {
 pub struct InitializeMint<'info> {
     #[account(
         init,
-        payer = payer,
+        payer = authority,
         mint::decimals = 9,
-        mint::authority = payer,
-        mint::freeze_authority = payer,
+        mint::authority = authority,
+        mint::freeze_authority = authority,
     )]
     pub mint: Account<'info, Mint>,
     #[account(mut)]
+       /// CHECK: This is the token account that we want to mint tokens to
+    pub authority: AccountInfo<'info>,
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
@@ -83,7 +87,9 @@ pub struct MintToken<'info> {
    #[account(mut)]
    pub token_account: AccountInfo<'info>,
    /// CHECK: the authority of the mint account
-   pub authority: Signer<'info>,  
+   pub authority: AccountInfo<'info>,  
+   pub payer: Signer<'info>,
+
 }
     
 // #[derive(Accounts)]
